@@ -183,7 +183,45 @@ public class Order {
 }
 ```
 
-## 기본 설계  
+## 기본 생성자   
+엔티티와 벨류의 생성자는 객체를 생성할 때 필요한 것을 전달 받는다.     
+그러나, **JPA는 리플랙션을 통한 객체 생성이므로 기본 생성자(파라미터 없는)가 무조건 필요하다.**        
+이를 지키기 위해 무분별한 `기본 public 생성자`를 만드는 것은 객체의 안정성을 깨뜨릴 위험이 있다.   
+
+```java
+@Embeddable
+public class Receiver {
+    @Column(name="receiver_name")  
+    private String name;
+    @Column(name="receiver_phone")  
+    private String phone;
+    
+    protected Receiver() {}
+    
+    public Receiver(String name, String phone) {
+        this.name = name;
+        this.phone = phone;
+    }
+    
+    ... // 생략
+}
+```
+`JPA 프로바이더`에서 사용되어야 하기 위해 기본 생성자를 정의해야 한다면         
+**protected** 로 접근 제어자를 설정하는 것은 매우 좋은 선택이다.        
+   
+**노트**     
+하이버네이트는 클래스를 상속한  프록시 객체를 이용해서 지연로딩을 구현한다.    
+이 경우 프록시 객체에서 상위 클래스의 기본 생성자를 호출할 수 있어야 하므로      
+지연 대상이 되는 `@Entity` 와 `@Embeddable` 기본 생성자는 `private/default`가 아니어야 한다.      
+
+## 필드 접근 방식  
+
+
+
+
+
+
+
 
 
 
