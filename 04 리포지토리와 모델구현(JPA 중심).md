@@ -340,6 +340,21 @@ public class OrderLine {
     ...
 }
 ```
+`OrderLine`의 매핑을 함께 표시했는데         
+`OrderLine`에는 `List`의 인덱스 값을 저장하기 위한 프로퍼티가 존재하지 않는다.              
+그 이유는 List 타입 자체가 인덱스를 갖고 있기 때문이다.      
+JPA는 `@OrderColumn`을 이용해서 지정한 컬럼에 리스트 인덱스 값을 저장한다.     
+   
+`@CollectionTable`은 벨류를 저장할 테이블을 지정할 때 사용한다.             
+`name` 속성으로 테이블 이름을 지정하고 `joinColumns` 속성은 외부키로 사용하는 컬럼을 지정한다.        
+외부키가 2개 이상인 경우애는 `@JoinColumn`의 배열을 이용해서 외부키 목록을 지정한다.     
+
+
+
+
+
+
+
 
 
 
