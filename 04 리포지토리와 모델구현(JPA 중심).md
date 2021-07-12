@@ -234,7 +234,127 @@ JPA 구현체인 하이버네이트는 `@Access`를 이용해서 명시적으로
 필드에 위치하면 필드, 메서드에 위치하면 메서드 접근 방식을 지원한다.       
 그래도 필드에 지정하면 알아서 되므로 굳이 작성하는 방향으로 가지는 않아도 될 것 같다.    
    
-## AttributeConverter 이용한 밸류 매핑 처리     
+## AttributeConverter 이용한 밸류 매핑 처리  
+int, long, String, LocalDate 와 같은 타입은 DB 테이블의 한 개 컬럼과 매핑된다.     
+마찬가지로, **벨류 타입의 프로퍼티를 한 개의 컬럼에 매핑해야할 때도 있다.**       
+즉, 벨류 내에 존재하는 2개 이상의 프로퍼티를 한 개의 컬럼으로 매핑하는 것을 말한다.     
+
+```java
+public class Product {
+    @Column(name="WIDTH")
+    private String width;
+    
+    public Length getLength() {
+        return new Width(width);        // DB 컬럼 값을 실제 프로파티 타입으로 변환한다.   
+    }
+    
+    void setWidth(Length length) {
+        this.width = width.toString();  // 실제 프로퍼티 타입을 DB 컬럼 값으로 변환  
+    }
+}
+```
+`JPA 2.0` 이하에서는 위와 같이 `getter/setter`를 이용해서 값을 처리할 수 밖에 없었다.    
+
+```java
+public interface AttributeConverter<X,Y> {
+    public Y convertToDatabaseColumn(X attribute);     // 단순 벨류 타입 -> DB 컬럼 변환   
+    public X convertToEntityAttribute(Y dbDate);       // DB 타입 -> DB 컬럼값을 벨류로 변환   
+}
+```
+```java
+@Converter(autoApply=true)
+public class MoneyConverter implements AttributeConverter<Money, Integer> {
+    
+    @Override
+    public Integer convertToDatabaseColumn(Money money) {
+        if(money == null) { return null; }
+        else return money.getValue();
+    }
+    
+    @Override
+    public Money convertToEntityAttribute(Integer value) {
+        if(value == null) return null;
+        else return new Money(value);
+    }
+}
+```
+`AttributeConverter`는 `엔티티<->벨류`를 지원하는 인터페이스로 `<>`에는 컨버트할 타입들을 적어놓는다.       
+`AttributeConverter<>`를 구현한 클래스는 `@Converter()`을 사용한다.   
+`autoApply=true`로 함으로써 모델에 출현하는 **모든 `Money` 타입의 프로퍼티**에 대해 `MoneyConverter`를 자동으로 적용한다.     
+
+```java
+public class Order {
+    
+    @Column(name = "total_amounts")
+    @Convert(converter = MoneyConverter.class)
+    private Money totalAmounts;
+    
+    ...
+}
+```
+`autoApply=false`일 경우,    
+**사용하고자 하는 프로퍼티에만 `@Convert(converter = 컨버터클래스.class)`를 적어주어 적용시킨다.**   
+   
+## 벨류 컬렉션:별도 테이블 매핑  
+JPA `1 대 N 관계`를 표현하면 아래와 같다.   
+
+```java
+public class Order {
+    private List<OrderLine> orderLines;
+}
+```
+**벨류 타입의 컬렉션은 별도 테이블에 보관한다.**  
+
+[#사진]()  
+
+벨류 컬렉션과 매핑된 `ORDER_LINE` 테이블은     
+외부키를 이용해서 엔티티에 해당하는 `PURCHASE_ORDER`테이블을 참조한다.     
+이 외부키는 컬렉션이 속할 엔티티를 의미한다.      
+`List 타입 컬렉션`은 인덱스 값이 필요하므로 `ORDER_LINE` 테이블에는 인덱스 값을 저장하기 위한 칼럼도 존재한다.        
+       
+```java
+public class Order {
+     ...
+     @ElementCollection
+     @CollectionTable(name="order_line", joinColumns=@JoinColumn(name="order_number"))
+     @OrderColumn(name="line_idx")
+     private List<OrderLine> orderLines;
+     ...
+}
+```
+```java
+@Embeddable
+public class OrderLine {
+    @Embedded
+    private ProductId productId;
+    
+    @Column(name="price")
+    private Money price;
+    
+    @Column(name="quantity")
+    private int quantity;
+    
+    @Column(name="amounts")
+    private Money amounts;
+    
+    ...
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
