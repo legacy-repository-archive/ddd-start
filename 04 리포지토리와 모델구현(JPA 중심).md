@@ -736,10 +736,55 @@ public class Product {
       
 * 상태를 변경하는 기능을 실행할 때         
 * 표현 영역에서 애그리거트의 상태 정보를 보여줄 때     
+        
+이 중 `표현 영역에서 애그리거트의 상태 정보를 보여줄 때`는          
+별도의 조회 전용 기능을 구현하는 방식을 사용하는 것이 유리할 때가 많기 때문에              
+애그리거트의 완전한 로딩과 관련된 문제는 상태 변경과 더 관련이 있다.            
+상태 변경 기능을 실행하기 위해 조회 시점에 즉시 로딩을 이용해서 애그리거트를 완전한 상태로 로딩할 필요는 없다.         
+JPA는 트랜잭션 범위 내에서 지연 로딩을 허용하기 때문에       
+다음 코드처럼 실제로 상태를 변경하는 시점에 필요한 구성요소만 로딩해도 문제가 되지 않는다.          
+
+```java
+@Transactional   
+public void removeOptions(ProductId id, int optIdxToBeDeleted) {
+    // Product를 로딩, 컬렉션은 지연 로딩으로 설정했다면, option은 로딩하지 않는다.   
+    Product product = productRepository.findById(id); 
+    // 트랜잭션 범위이므로 지연 로딩으로 설정한 연관 로딩 가능  
+    product.removeOption(optIdxToBeDeleted);
+}
+```
+```java
+@Entity
+public class Product {
     
-이 중 `표현 영역에서 애그리거트의 상태 정보를 보여줄 때`는       
-별도의 조회 전용 기능을 구현하는 방식을 사용하는 것이 유리할 때가 많기 때문에          
-애그리거트의 완전한 로딩과 관련된 문제는 상태 변경과 더 관련이 있다.     
+    @ElementCollection(fetch=FetchType.LAZY)
+    @CollectionTable(name="product_option", 
+        joinColumns=@JoinColumn(name="product_id"))
+    @OrderColumn(name="list_idx")
+    private List<Option> options = new ArrayList<>();
+    
+    public void removeOption(int optIdx) {
+        // 실제 컬렉션에 접근할 때 로딩  
+        this.options.remove(optIdx);
+    }
+}
+```
+일반적인 애플리케이션은 상태를 변경하는 기능을 실행하는 빈도보다 조회하는 기능을 실행하는 빈도가 훨씬 높다.         
+그러므로 상태 변경을 위해 지연 로딩을 사용할 때 발생하는 추가 쿼리로 인한 실행 속도 저하는 문제가 되지 않는다.     
+       
+이런 이유로 애그리거트 내의 모든 연관을 즉시 로딩으로 설정할 필요는 없다.         
+지연 로딩은 동작 방식이 항상 동일하기 때문에 즉시 로딩처럼 경우의 수를 따질 필요가 없는 장점이 있다.          
+       
+즉시 로딩 설정은 `@Entity`나 `@Embeddable`에 대해 다르게 동작하고,       
+JPA프로바이더에 따라 구현 방식이 다를 수 있다.      
+물론, 지연로딩은 즉시 로딩모다 쿼리 실행 횟수가 많아질 가능성이 더 높다.      
+따라서 무조건 즉시로딩이나 지연로딩으로만 설정하기 보다는 애그리거트에 맞게 즉시 로딩과 지연로딩을 선택해야한다.      
+
+# 애그리거트 영속성 전파  
+
+
+        
+
 
 
 
