@@ -477,9 +477,125 @@ JPA는 내부적으로 엔티티를 비교할 목적으로 `equals()/hashcode()`
 예를 들어, 게시글 데이터를 ARTICLE 테이블과 ARTICLE_CONTENT 테이블로 나눠서 저장한다고 가정한다.     
 
 [#사진](#)     
+     
+ARTICLE_CONTENT 테이블의 ID 컬럼이 식별자이므로       
+ARTICLE_CONTENT와 매핑되는 ArticleContent를 엔티티로 생각할 수 있기에     
+Article과 ArticleContent 두 엔티티 간의 일대일 연관으로 매핑하는 실수를 할 수 있다.   
    
-ARTICLE_CONTENT 테이블의 ID 컬럼이 식별자이므로    
-ARTICLE_CONTENT와   
+ArticleContent는 Article의 벨류다.     
+ARTICLE_CONTENT의 ID는 식별자이기는 하지만         
+ARTTICLE 테이블과 연결하기 위함일뿐 글의 특정 프로퍼티를 별도 테이블에 보관한 것으로 접근해야한다.          
+(앞서 ID 기법에 대해서 말했는데 이를 적용한 것 같다.)      
+  
+ArticleContent는 벨류이므로 `@Embeddable`로 매핑한다.      
+ArticleContent와 매핑되는 테이블은 Article과 매핑되는 테이블과 다른데,   
+이때 벨류를 매핑한 테이블을 지정하기 위해 `@SecondaryTable`과 `@AttributeOverride`를 사용한다.   
+
+```java
+@Entity
+@Table(name="article")   
+@SecondaryTable(
+    name="article_content",
+    pkJoinColumns=@PrimaryKeyJoinColumn(name="id")
+)
+public class Article {
+    @Id
+    private Long id;
+    private String title;
+    ...
+    
+    @AttributeOverrides({
+        @AttributeOverride(name="content", column=@Column(table="artilce_content"}),
+        @AttributeOverride(name="contentType", column=@Column(table="artilce_content"})
+    })
+    private ArticleContent content;
+    ...
+}
+```
+`@SecondaryTable`의    
+`name 속성`은 벨류를 지정할 테이블을 지정한다.        
+`pkJoinColumns 속성`은 벨류 테이블에서 엔티티 테이블로 조인할 때 사용할 컬럼을 지정한다.        
+content 필드에 `@AttributeOverride`를 사용해서 새로운 컬럼 값을 정의해줬다.   
+     
+```java   
+Article article = entityManager.find(Article.class, 1L);    
+```
+`@SecondaryTable`을 이용하면 아래 코드를 실행할 때 두 테이블을 조인해서 데이터를 조회한다.          
+
+* Article
+* ArticleCotent  
+
+게시글은 ARTICLE 테이블만 필요하지 ARTICLE_CONTENT는 필요하지 않는다.     
+`@SecondTable`은 벨류인 테이블을 조인해서 값을 가져오는데 **이는 원하는 결과가 아니다.**  
+
+ArticleContent 를 별도의 엔티티로 만들어 즉시/지연로딩을 할 수 있지만     
+이 방식은 엔티티가 아닌 모델을 엔티티로 만드는 것으로 좋은 방법은 아니다.     
+대신 조회 전용 기능을 구현하는 방법을 사용할 수 있는데 5장에서 다뤄본다.    
+    
+## 벨류 컬렉션을 @Entity로 매핑하기       
+개념적으로 **벨류인데 구현 기술의 한계나 팀 표준으로 @Entity를 사용해야 할 때도 있다**         
+제품의 이미지 업로드 방식에 따라 이미지 경로와 썸네일 이미지 제공 여부가 달라진다고 가정하자        
+   
+[#](#)     
+   
+JPA는 `@Embeddable`타입의 클래스가 상위 클래스가 되는 상속 매핑을 지원하지 않는다.            
+따라서 상속 구조를 갖는 밸류 타입을 사용하려면 `@Embeddable` 대신 `@Entity`를 이용한 상속 매핑으로 처리한다.                   
+또한, 구현 클래스를 기본하기 위한 타입 식별 컬럼을 추가해야한다.           
+     
+[#](#)
+   
+한 테이블에 Image 및 하위 클래스를 매핑하므로      
+`Image 클래스`에 `@Inheritance`를 적용하고 strategy 값으로 `SINGLE_TABLE`을 사용하고,           
+`@DiscriminatorColumn`을 이용해서 타입을 구분하는 용도로 사용할 컬럼을 지정한다.              
+`Image`를 `@Entity`로 매핑했지만 모델에서 `Image는 엔티티`가 아니라 벨류이므로                 
+아래 코드와 같이 상태를 변경하는 기능은 추가하지 않는다.        
+   
+```java
+@Entity
+@Inheritance(Strategy=InheritanceYpe.SINGLE_TABLE)
+@DiscriminationColumn(name="image_type")   
+@Table(name="image")
+public abstract class Image {
+    ...
+    public abstract String getUrl();
+    public abstract boolean hasThumbnail();
+    public abstract String getThumbnailURL();
+}
+```
+`Image`를 상속받은 클래스는 다음과 같이 `@Entity`와 `@Discriminitor`를 사용해서 매핑을 설정한다.     
+     
+```java
+@Entity
+@DiscriminatorValue("II")
+public class InternalImage extends Image {
+    ...
+}
+```
+```java
+@Entity
+@DiscriminatorValue("EI")
+public class ExternalImage extends Image {
+
+}
+```
+
+
+
+
+   
+
+  
+
+
+
+
+
+
+
+
+
+
+
 
 
 
