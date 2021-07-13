@@ -348,48 +348,143 @@ JPA는 `@OrderColumn`을 이용해서 지정한 컬럼에 리스트 인덱스 �
 `@CollectionTable`은 벨류를 저장할 테이블을 지정할 때 사용한다.             
 `name` 속성으로 테이블 이름을 지정하고 `joinColumns` 속성은 외부키로 사용하는 컬럼을 지정한다.        
 외부키가 2개 이상인 경우애는 `@JoinColumn`의 배열을 이용해서 외부키 목록을 지정한다.     
+  
+## 벨류 컬렉션: 한 개 컬럼 매핑     
+**벨류 컬렉션**을 별도 테이블이 아닌 한 개 컬럼에 저장해야 될 때가 있다.        
+예를들어, 이메일을 `Set<>`으로 보관하고 DB에는 한 개 컬럼에 콤마로 구분해서 저장해야할 때가 있다.         
+이때, `AttributeConverter`를 이용하면 벨류 컬렉션을 한 개 컬럼에 쉽게 매핑할 수 있다.      
+단, 이를 이용하려면 **컬렉션을 표현하는 새로운 벨류 타입 클래스를 추가해야한다.**        
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```java
+public class EmailSet {
+    private Set<Email> emails = new HashSet<>();
     
+    private EmailSet(){}
+    privat EmailSet(Set<Email> emails) {
+        this.emails.addAll(emails);
+    }
+    
+    public Set<Email> getEmails() {
+        return Collections.unmodifiableSet(emails); 
+    }
+}
+```
+```java
+@Converter
+public class EmailSetConverter implements AttributeConverter<EmailSet, String> {
+    @Override
+    public String convertToDatabaseColumn(EmailSet attribute) {
+        if(attribute == null) return null;
+        return attribute.getEmails().stream()
+            .map(Email::toString())
+            .collect(Collectors.joining(",");
+    }
+    
+    @Override
+    public String convertToEntityAttributes(String dbData) {
+        if(dbData == null) return null;
+        String[] emails = dbData.split(",");
+        Set<Email> emailSet = Arrays.stream(emails)
+            .map(value -> new Email(value))
+            .collect(toSet());
+        return new EmailSet(emailSet);
+    }
+}
+```
+```java
+@Column(name="emails")
+@Convert(converter = EmailSetConverter.class)   
+private EmailSet emailSet;
+```
+   
+## 벨류를 이용한 아이디 매핑      
+식별자는 최종적으로 문자열이나 숫자와 같은 기본 타입이기에 `String` 이나 `Long` 타입을 이용해서 식별자를 매핑한다.      
+
+```java
+@Entity
+public class Order {
+    // 기본 타입을 이용한 식별자 매핑  
+    @Id
+    private String number;
+    ...
+}
+```
+```java
+@Entity
+public class Article {
+    @Id
+    private Long id;
+    ...
+}
+```   
+기본 타입을 사용하는 것도 좋지만, 벨류 타입 객체로 만들어 사용하는 것도 좋은 방법이다.    
+식별자를 벨류타입으로 매핑한다면 `@EmbeddedId`를 사용해야한다.   
+   
+```java
+@Entity
+@Table(name = "purchase_order")
+public class Order {
+    // 기본 타입을 이용한 식별자 매핑  
+    @EmbeddedId
+    private OrderNo number;
+    ...
+}
+
+@Embeddedable
+public class OrderNo implements Serializable {
+    @Column(name="order_number")
+    private String number;
+    ...
+}
+```
+JPA에서 식별자 타입은 `Serializable` 이어야 하므로 인터페이스 구현을 해줘야한다.     
+
+벨류 타입 식별자의 정점은 식별자에 기능을 추가할 수 있다는 점이다.    
+예) `1세대 주문 번호`와 `2세대 주문번호` 구분시 첫 글자를 이용한다.     
+
+```java
+@Embeddedable
+public class OrderNo implements Serializable {
+    @Column(name="order_number")
+    private String number;
+    
+    public boolean is2ndGeneration() {
+        return number.startWith("N");  
+    }
+}
+```
+```java
+if (order.getNumber().is2ndGeneration()) {
+   ...
+}
+```
+시스템 세대 구분이 필요한 코드는 OrderNo가 제공하는 기능을 이용해서 구분하면된다.     
+JPA는 내부적으로 엔티티를 비교할 목적으로 `equals()/hashcode()`를 통해 속한 모든 필드를 비교해야한다.   
+  
+## 별도 테이블에 저장하는 벨류 매핑   
+애그리거트에서 루트 엔티티를 제외한 나머지 구성요소는 대부분 벨류이다.       
+그렇기에 **또 다른 엔티티가 있다면 진짜 엔티티인지 의심해봐야 한다.**      
+예를 들면, `OrderLine`은 별도의 테이블을 가지고 있지만 엔티티가 아닌 벨류이다.        
+    
+**벨류가 아닌 엔티티가 확실하다면 다른 애그리거트는 아닌지 확인해야한다.**              
+특히, 자신만의 독자적인 라이프사이클을 갖는다면 다른 애그리거트일 가능성이 높다.         
+앞선 챕터에서 언급했듯이 상품과 상품 리뷰는 독자적인 라이프사이클을 가지기에 다른 애그리거트이다.     
+        
+애그리거트에 속한 객체가 벨류인지 엔티티인지 구분하는 방법은 고유 식별자를 갖는지 여부를 확인하는 것이다.         
+하지만, 식별자를 찾을 때 **매핑되는 테이블의 식별자를 애그리거트 구성요소의 식별자와 동일한 것으로 착각하면 안 된다.**          
+**별도 테이블로 저장되고 테이블에 PK가 있다고 해서 테이블과 매핑되는 애그리거트 구성요소가 고유 식별자를 갖는 것은 아니다.**   
+
+예를 들어, 게시글 데이터를 ARTICLE 테이블과 ARTICLE_CONTENT 테이블로 나눠서 저장한다고 가정한다.     
+
+[#사진](#)     
+   
+ARTICLE_CONTENT 테이블의 ID 컬럼이 식별자이므로    
+ARTICLE_CONTENT와   
+
+
+
+     
+   
 
 
 
@@ -403,11 +498,6 @@ JPA는 `@OrderColumn`을 이용해서 지정한 컬럼에 리스트 인덱스 �
 
 
 
-
-
-
-
-
-
+   
 
 
