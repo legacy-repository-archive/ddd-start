@@ -579,6 +579,124 @@ public class ExternalImage extends Image {
 }
 ```
 
+`Image`가 `@Entity`이므로    
+`Image 목록`을 담고 있는 Product는 `@OneToMany`를 이용해서 매핑을 처리한다.             
+Image는 벨류이므로 독자적인 라이프사이클을 갖지 않고 Product에 완전히 의존한다.             
+따라서 cascade 속성을 이용해서 Product를 저장할 때 함께 저장되고, 
+Product를 삭제할 때 함께 삭제되도록 설정한다.           
+리스트 Image 객체를 제거하면 DB에서 함께 삭제되도록 orphanRemoval도 true로 설정한다.       
+
+```java
+@Entity
+@Table(name="product")
+public class Product {
+    @EmbeddedId
+    private ProductId id;
+    private String name;
+    
+    @Convert(converter=MoneyConverter.class)
+    private Money price;
+    private String detail;
+    
+    @OneToMany(cascade={CascadeType.PERSIST, CascadeType.REMOVE}, orphanRemoval=true) 
+    @JoinColumn(name="product_id")
+    @OrderColumn(name="list_idx")
+    private List<Image> images = new ArrayList<>();
+    ...
+    public void changeImages(List<Image> newImages) {
+        images.clear();
+        images.addAll(newImages);
+    }    
+}
+```
+`changeImages()`는 이미지 교체를 위해 `List<>`의 `clear()`를 사용한다.    
+하지만, `OneToMany` 구조에서 `clear()`는 각각의 대상을 쿼리로 조회하고 삭제한다.        
+즉, 전체를 가져오는 1번, 각각의 객체를 삭제하는`N`이되어 `N+1`이라는 무시무시한 쿼리를 날리게 된다.        
+  
+하이버네이트는 `@Embeddable`에 대한 컬렉션의 `clear()`를 호출하면      
+컬렉션에 속한 객체를 로딩하지 않고 한 번의 `delete`로 삭제 처리를 수행한다.     
+   
+애그리거트의 특성을 유지하면서 이 문제를 해소하려면 결국 상속을 포기하고   
+`@Embeddable`로 매핑된 단일 클래스로 구성해야한다.     
+물론 이 같은 타입에 따라 기능을 구현하려면 다음과 같이 if-else를 써야하는 단점이 있다.   
+
+  
+```java
+@Embeddable
+public class Image {
+    @Column(name="image_type")
+    private String imageType;
+    @Column(name="iamge_path")
+    private String path;
+    
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name="upload_time")
+    private Date uploadTime;
+    ...
+    
+    public boolean hasThumbnail() {
+        if (imageType.equals("II")) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
+```
+코드 유지보수와 성능의 두 가지 측면을 고려해서 구현 방식을 선택해야한다.   
+  
+## ID 참조와 조인 테이블을 이용한 단방향 M:N 매핑           
+애그리거트간 집합 연관은 성능상의 이유로 피해야 한다고 했다.       
+그럼에도 불구하고 요구사항을 구현하는데 집합 연관을 사용하는 것이 유리하다만          
+`ID 참조`를 이용한 단방향 집합 연관을 적용해 볼 수 있다.     
+
+```java
+@Entity  
+@Table(name="product")      
+public class Product {
+    @EmbeddedId
+    private ProductId id;
+    
+    @ElementCollection
+    @CollectionTable(name="product_category",  
+        joinColumns = @JoinColumn(name="product_id")) 
+    private Set<CategoryId> categoryIds;
+}
+```
+
+이코드는 `Product`에서 `Category`로의 단방향 M:N 연관을 ID참조 방식으로 구현한 것이다.   
+ID참조를 이용한 애그리거트 간 단방향 M:N 연관은 벨류 컬렉션 매핑과 동일한 방식으로 설정한 것을 알 수 있다.  
+차이점이 있다면 집합의 값에 벨류 대신 연관을 맺는 식별자가 온다는 점이다.   
+  
+`@ElementCollection`을 이용하기 때문에 Product를 삭제할 때         
+매핑에 사용한 조인 테이블의 데이터도 함께 삭제된다.      
+애그리거트를 직접 참조하는 방식을 사용햇다면 영속성 전파나 로딩 전략을 고민해야하는데     
+ID 참조 방식을 사용함으로써 이런 고민을 할 필요가 없다.   
+
+# 애그리거트 로딩 전략   
+JPA 매핑에서 가장 중요한 점은 애그리거트에 속한 객체가 모두 모여야 완전한 하나가 된다는 것이다.     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
