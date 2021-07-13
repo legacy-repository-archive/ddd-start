@@ -676,6 +676,77 @@ ID 참조 방식을 사용함으로써 이런 고민을 할 필요가 없다.
 # 애그리거트 로딩 전략   
 JPA 매핑에서 가장 중요한 점은 애그리거트에 속한 객체가 모두 모여야 완전한 하나가 된다는 것이다.     
 
+```java
+Product product = productRepository.findById(id);
+```
+조회 시점에서 애그리거트를 완전한 상태가 되도록 하려면        
+**루트 연관 매핑의 조회 방식을 즉시 로딩으로 설정하면 된다.**          
+
+```java
+// @Entity 컬렉션에 대한 즉시 로딩 설정  
+@OneToMany(cascade={CascadeType.PERSIST, CascadeType.REMOVE},  
+    orphanReomval=true, fetchFetchType.EAGER
+@JoinColumn(name="product_id")    
+@OrderColumn(name="list_idx")      
+private List<Image> images = new ArrayList<>();
+  
+// @Embeddable 컬렉션에 대한 즉시 로딩 설정   
+@ElementCollection(fetch=FetchType.EAGER)
+@CollectionTable(name="order_line",
+    joinColumns = @JoinColumn(name="order_number"))
+@OrderColumn(name="line_idx")
+private List<OrderLine> orderLines;
+```
+`즉시로딩`을 사용하면 로딩 시점에 연관된 객체를 한번에 로딩한다는 장점이 있지만,   
+컬렉션에 대해서 로딩한다면 심각한 성능 이슈를 발생시킨다.   
+
+```java
+@Entity
+@Table(name="product")
+public class Product {
+    ...
+    @OneToMany(
+        cascade={CascadeType.PERSIST, CascadeType.REMOVE},
+        orphanRemoval = true,
+        fetch=FetchType.REAGER)
+    @JoinColumn(name="product_id")
+    @OrderColumn(name="list_idx")
+    private List<Image> images = new ArrayList<>();
+    
+    @ElementCollection(fetch=FetchType.EAGER)
+    @CollectionTable(name="product_option",  
+        JoinColumns=@JoinColumn(name="product_id"))
+    @OrderColumn(name="list_idx")
+    private List<Option> options = new ArrayList<>();
+    ...    
+}
+```
+`fetch=FetchType.EAGER`를 이용하면 값을 가져올때 조인해서 가져온다.       
+단, 이 쿼리는 **카타시안 조인**을 사용하는데 쿼리 결과에 중복을 발생시킨다.          
+즉, 조회하는 Product의 image가 2개이고 option이 2개면, 쿼리 결과로 구해지는 행 개수는 4개다.         
+즉, Product는 4번 중복되고 image와 product_option은 2번 중복된다.     
+    
+물론, 하이버네이트가 중복된 데이터를 알맞게 제거해서       
+실제 메모리에는 1개의 Product 객체, 2개의 Image 객체, 2개의 Option 객체로 변환해 주지만     
+애그리거트가 커지면 문제가 될 수 있다.(10개/25개면 -> 250개)      
+보통 조회 성능때문에 즉시로딩을 사용하지만 이경우 오히려 즉시로딩 때문에 성능이 나빠진 경우다.        
+
+애그리거트는 개념적으로 하나여야하지만, 루트 엔티티를 로딩하는 시점에 모든 객체를 로딩할 필요는 없다.     
+만약, 애그리거트가 완전해야 한다면 그 상황으로 2가지가 있다.   
+      
+* 상태를 변경하는 기능을 실행할 때         
+* 표현 영역에서 애그리거트의 상태 정보를 보여줄 때     
+    
+이 중 `표현 영역에서 애그리거트의 상태 정보를 보여줄 때`는       
+별도의 조회 전용 기능을 구현하는 방식을 사용하는 것이 유리할 때가 많기 때문에          
+애그리거트의 완전한 로딩과 관련된 문제는 상태 변경과 더 관련이 있다.     
+
+
+
+
+
+
+
 
 
 
