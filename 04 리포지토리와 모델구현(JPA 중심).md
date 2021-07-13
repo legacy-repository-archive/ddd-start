@@ -781,6 +781,59 @@ JPA프로바이더에 따라 구현 방식이 다를 수 있다.
 따라서 무조건 즉시로딩이나 지연로딩으로만 설정하기 보다는 애그리거트에 맞게 즉시 로딩과 지연로딩을 선택해야한다.      
 
 # 애그리거트 영속성 전파  
+애그리거트가 완전한 상태여야 한다는 것은     
+애그리거트 루트를 조회할 때뿐만 아니라 저장하고 삭제 할때도 하나로 처리해야 함을 의미한다.       
+            
+* 저장 메서드는 애그리거트 루트만 저장하면 안 되고 애그리거트에 속한 모든 객체를 저장해야 한다.         
+* 삭제 메서드는 애그리거트 루트 뿐만 아니라 애그리거트에 속한 모든 객첼를 삭제해야한다.            
+           
+`@Embeddable` 매핑 타입의 경우 함께 저장되고 삭제되므로 `cascade` 속성을 추가로 설정하지 않아도 된다.            
+반면에 애그리거트에 속한 `@Entity`타입에 대한 매핑은 `cascade`속성을 사용해서 저장과 삭제 시에 함께 처리되도록 설정해야한다.         
+`@OneToOne`, `@OneToMany` 는 cascade 속성의 기본값이 없으므로        
+다음 코드처럼 cascade 속성값으로 CascadeType.PERSIST, CascadeType.REMOVE 를 설정한다.     
+   
+```java
+@OneToMany(cascade={CascadeType.PERSIST, CascadeType.REMOVE},
+    orphanRemoval = true)
+@JoinColumn(name="product_id")   
+@OrderColumn(name="list_idx")
+private List<Image> iamges = new ArrayList<>();
+```
+
+# 식별자 생성 기능  
+식별자는 크게 3가지 방식 중 하나로 생성한다.   
+    
+* 사용자가 직접 생성          
+* 도메인 로직으로 생성         
+* DB를 이용한 일련번호 사용        
+
+이메일 주소처럼 사용자가 직접 식별자를 입력하는 경우는 식별자 생성 주체가 사용자이기 때문에       
+도메인 영역에 식별자 생성 기능을 구현할 필요가 없다.     
+       
+식별자 생성 규칙이 있는 경우 엔티티를 생성할 때 이미 생성한 식별자를 전달하므로         
+엔티티가 식별자 생성 기능을 제공하는 것 보다는 별도 서비스로 식별자 생성 기능을 분리해야한다.      
+식별자 생성 규칙은 도메인 규칙이므로 도메인 영역에 식별자 생성 기능을 위치시켜야한다.     
+예를 들어 다음과 같은 도메인 서비스를 도메인 영역에 위치시킬 수 있다.   
+  
+```java
+public class ProductIdService {
+    public ProductId nextId() {
+        ... // 정해진 규칙으로 식별자 생성  
+    }
+}
+```
+응용 서비스는 이 도메인 서비스를 이용해서 식별자를 구하고 엔티티를 생성할 것이다.   
+
+```java
+public class CreateProductService {
+    @Autowired private ProductIdService idService;
+    @Autowired private ProductRepository productRepository;
+    
+}
+```
+ 
+
+
 
 
         
