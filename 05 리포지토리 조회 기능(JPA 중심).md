@@ -117,6 +117,31 @@ public class OrderSpec implements Specification<Order> {
     }
 }
 ```
+`OrderSpec`의 `toPredicate()`는 Order의 `orderer.memberId.id`프로퍼티가       
+생성자로 전달받은 `ordererId`와 같은지 비교하는 Predicate 를 생성해서 리턴하다.            
+응용 서비스는 원하는 스펙을 생성하고 리포지터리에 전달해서 필요한 애그리거트를 검색하면된다.       
+   
+```java
+Specification<Order> ordererSpec = new OrdererSpec("madvirus");
+List<Order> orders = orderRepository.findAll(ordererSpec);
+```
+
+### JPA 정적 메타 모델 
+```java
+@StaticMetamodel(Order.class)
+public abstract class Order_ {
+    public static volatile SingularAttribute<Order, OrderNo> number;
+    ...
+}
+```
+
+정적 메타 모델은 `@StaticMetamodel`를 통해서 관련 모델을 지정한다.   
+메타 모델 클래스의 이름은 관례적으로 맨 뒤에 `_`를 붙인다.  
+       
+정적 메타 모델 클래스는 대상 모델의 각 프로퍼티와 동일한 이름을 갖는 정적 필드를 정의한다.    
+이 정적 필드는 프로퍼티에 대한 메타 모델로서 프로퍼티 타입에 따라 여러 타입을 사용해서 메타 모델을 정의한다.   
+
+
 
 
 
