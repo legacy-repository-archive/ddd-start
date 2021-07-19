@@ -162,7 +162,7 @@ public abstract class Order_ {
 
 정적 메타 모델을 사용하는 대신 문자열로 프로퍼티를 지정할 수도 있다.   
 
-```
+```java
 root.get("orderer").get("memberId").get("id")
 ```
 하지만 문자열은 오타 가능성이 있고 실행하기 전까지 오타가 있다는 것을 놓치기 싫다.    
