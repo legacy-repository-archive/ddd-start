@@ -119,12 +119,31 @@ public class OrderSpec implements Specification<Order> {
 ```
 `OrderSpec`의 `toPredicate()`는 Order의 `orderer.memberId.id`프로퍼티가       
 생성자로 전달받은 `ordererId`와 같은지 비교하는 Predicate 를 생성해서 리턴하다.            
-응용 서비스는 원하는 스펙을 생성하고 리포지터리에 전달해서 필요한 애그리거트를 검색하면된다.       
    
 ```java
 Specification<Order> ordererSpec = new OrdererSpec("madvirus");
 List<Order> orders = orderRepository.findAll(ordererSpec);
 ```
+응용 서비스는 원하는 스펙을 생성하고 리포지터리에 전달해서 필요한 애그리거트를 검색하면 된다.         
+               
+```java
+public class OrdererSpecs {
+    public static Specification<Order> orderer(String ordererId) {
+        return (root, cb) -> cb.equals(
+            root.get(Order_.orderer).get(Orderer_.memberId).get(MemberId_.id), ordererId);
+    }
+    
+    public static Specification<Order> between(Date from, Date to) {
+        return (root, cb) -> cb.between(root.get(Order_.orderDate), form, to);
+    }
+}
+```
+Specification 구현 클래스를 개별적으로 만들지 않고 별도 클래스에 스펙 생성 기능을 모아도 된다.   
+스펙 생성이 필요한 코드는 스펙 생성 기능을 제공하는 클래스를 이용해서 조금 더 간결하게 스펙을 생성할 수 있다. 
+
+```java
+Specification<Order> betweenSpec = OrderSpecs.between(fromTime, toTime);
+```  
 
 ### JPA 정적 메타 모델 
 ```java
@@ -136,13 +155,22 @@ public abstract class Order_ {
 ```
 
 정적 메타 모델은 `@StaticMetamodel`를 통해서 관련 모델을 지정한다.   
-메타 모델 클래스의 이름은 관례적으로 맨 뒤에 `_`를 붙인다.  
-       
+메타 모델 클래스의 이름은 관례적으로 맨 뒤에 `_`를 붙인다. 
+
 정적 메타 모델 클래스는 대상 모델의 각 프로퍼티와 동일한 이름을 갖는 정적 필드를 정의한다.    
 이 정적 필드는 프로퍼티에 대한 메타 모델로서 프로퍼티 타입에 따라 여러 타입을 사용해서 메타 모델을 정의한다.   
 
+정적 메타 모델을 사용하는 대신 문자열로 프로퍼티를 지정할 수도 있다.   
 
-
+```
+root.get("orderer").get("memberId").get("id")
+```
+하지만 문자열은 오타 가능성이 있고 실행하기 전까지 오타가 있다는 것을 놓치기 싫다.    
+이런 이유로 Criteria를 사용할 때에는    
+정적 메타 모델 클래스를 사용하는 것이 코드 안정성이나 생산성 측면에서 유리하다.       
+   
+적적 메타 모델 클래스를 직접 작성할 수 있지만 하이버네이트와 같은 JPA 프로바이더는       
+정적 메타 모델을 생성하는 도구를 제공하고 있으므로 이들 도구를 사용하면 편리하다.      
 
 
 
