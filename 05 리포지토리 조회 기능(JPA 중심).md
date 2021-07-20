@@ -328,41 +328,224 @@ public class JpaQueryUtils {
     }
 }
 ```
-JPQL을 사용하는 리포지터리 코드는 다음과 같이 toJPQLOrderBy() 메서드를 사용해서      
-알맞은 order by 절을 생성할 수 있다.     
+JPQL을 사용하는 리포지터리 코드는 
+다음과 같이 `toJPQLOrderBy()` 메서드를 사용해서 알맞은 `order by` 절을 생성할 수 있다.          
+
+```java
+TypedQuery<Order> query = entityManager.createQuery(
+    "select o from Order o where o.orderer.memberId.id = :ordererId " +  
+        JpaQueryUtils.toJPQLOrderby("o", "number.number desc"), Order.class);
+)
+```
+...생략하겠습니다.... 
+
+# 페이징과 개수 구하기 구현  
+JPA 쿼리는 `setDirstResult()`, `setMaxResult()`를 제공하고 있는데    
+이 두 메서드를 이용해서 페이징을 구현할 수 있다.  
 
 
+```java
+@Override
+pubilc List<Order> findByOrdererId(String ordererId, int startRow, int fetchSize) {
+    TypedQuery<Order> query = entityManager.createQuery(
+        "select o from Order o " +
+            "where o.orderer.memberId.id = :ordererId " +
+            "order by o.number.number desc"), Order.class);
+    query.setParameter("ordererId", ordererId);
+    query.setFirstResult(startRow);
+    query.setMaxResult(fetchSize);
+    return query.getResultList();
+}
+```
 
+* setFirstResult(startRow) : 읽어올 첫 번째 행 번호를 지정합니다.       
+* setMaxResult(fetchSize) : 읽어올 행 개수를 지정한다.     
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+시작행 값과 결과 개수를 파라미터로 전달하면 4페이지에 해당하는 데이터 결과를 구할 수 있게된다.   
+```java
+List<Order> orders = findbyOrdererId("madvirus", 45, 15);
+```   
   
+페이징과 함께 사용되는 기능이 전체 개수를 구하는 기능이다.     
+전체 개수를 구하는 기능은 JPQL을 이용해서 간단하게 구현할 수 있다.      
+
+```java
+@Repository
+public class JpaOrderRepository implements OrderRepository {
+    ...
+    @Override
+    public Long countsAll() {
+        TypeQuery<Long> query = entityManager.createQuery(
+            "select count(o) from Order o", Long.class);
+        )
+        return query.getSingleResult();
+    }
+}
+```
+Specification을 이용해서 특정 조건을 충족하는 애그리거트의 개수를 구하고 싶다면 아래와 같은 코드를 사용한다.   
+
+```java
+@Repository
+public class JpaOrderRepository implements OrderRepository {
+    ...
+    @Override
+    public Long counts(Specification<Order> spec) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Order> criteriaQuery = cb.createQuery(Order.class);  
+        Root<Order> root = criteriaQuery.from(Order.class);
+        Predicate predicate = spec.toPredicate(root, cb);
+        criteriaQuery.select(db.count(root)).where(spec.toPredicate(root, cb));
+        TypedQuery<Order> query = entityManager.createQuery(criteriaQuery);
+        return query.getResultList();
+    }
+}
+```
+  
+# 조회 전영 기능 구현  
+리포지터리는 애그리거트의 저장소를 표현하는 것으로 다음 용도로 리포지토리를 사용하는 것은 접합하지 않다.   
+   
+* 여러 애그리거트를 조합해서 한 화면에 보여주는 데이터 제공      
+* 각종 통계 데이터 제공    
+   
+여러 애그리거트를 조합하여 활용하는 것은 즉시로딩/지연로딩/연관 매핑들로 인해 골치가 아플 것이다.     
+애그리거트간에 직접 연관을 맺으면 ID로 참조할 때의 장점을 활용할 수 없게 된다.      
+
+각종 통계 데이터 역시 다양한 테이블을 조인하거나 DBMS 전용 기능을 사용해야 구할 수 있는데,      
+이는 `JPQ`이나 `Criteria`로 처리하기 힘들다.    
+
+## 동적 인스턴스 생성 
+JPA는 쿼리 결과에서 임의의 객체를 동적으로 생성할 수 있는 기능을 제공하고 있다.   
 
 
+```java
+@Override
+public List<OrderView> selectByOrderer(String ordererId) {
+    String selectQuery = 
+        "select new com.myshop.order.application.dto.OrderView(o, m, p)" +
+        "from Order o join o.orderLine o1, Member m, Product p " +
+        "where o.orderer.memberId.id = :ordererId " +
+        "and o.orderer.memberId = m.id " + 
+        "and index(o1) = 0 " + 
+        "and o1.productId = p.id " + 
+        "order by o.number.number desc";
+    TypedQuery<OrderView> query = 
+        em.createQuery(selectQuery, OrderVlew.class);
+    query.setParameter("ordererId", ordererId);
+    return query.getResultList();
+}
+```
+이 코드에서 JPQL의 select 절을 보면 new 키워드가 있다.       
+new 키워드 뒤에 생성할 인스턴스의 완전한 클래스 이름을 지정하고         
+괄호 안에 생성자에 인자로 전달할 값을 지정한다.       
+   
+이 코드의 경우 OrderView 생성자에 인자로 각각 Order, Member, Product를 전달하고      
+생성자는 전달받은 객체로부터 필요한 값을 추출한다.    
 
+```java
+public class OrderView {
+    private String number;
+    private long totalAmounts;
+    ...
+    private String productName;
+}
+public class OrderView(Order order, Member member, Product product) {
+    this.number = order.getNumber().getNumber();
+    this.totalAmoutns = order.getToatalAmounts().getValue();
+    ...
+    this.productName = product.getName();
+}
+...
+```
+조회 전용 모델을 만드는 이유는 표현 영역을 통해 사용자에게 데이터를 보여주기 위함이다.        
+많은 웹 프레임워크는 새로 추가한 밸류 타입을 알맞은 형식으로 출력하지 못하므로           
+위 코드처럼 값을 기본 타입으로 변환하면 편리하다.        
+   
+물론, 사용하는 웹 프레임워크에 익숙하다면 Money와 같은 밸류 타입을       
+원하는 형식으로 출력하도록 프레임워크를 확장해서      
+조회 전용 모델에서 밸류 타입 의미가 사라지지 않도록 할 수 있다.      
+   
+모델의 개별 프로퍼티를 생성자에 전달할 수도 있다.   
+주문 목록을 보여줄 목적으로 OrderView를 사용한다면 생성자로 필요한 값만 받아도 될 것이다.   
+즉, 다음과 같이 필요한 값만 전달하도록 JPQL과 생성자를 수정할 수도 있다.     
+   
+```java
+select new com.mysqhop.order.application.dto.orderView(
+    o.number.number, o.totalAmounts, o.orderDate, m.id.id, m.name, p.name)
+...(생략)
+```
+동적 인스턴스의 장점은 JPQL을 그대로 사용하므로 객체 기준으로 쿼리를 작성하면서도          
+동시에 지연/즉시 로딩과 같은 고민 없이 원하는 모습으로 데이터를 조회할 수 있다는 점이다.    
+   
+## 하이버네이트 @Subselect 사용   
+하이버네이트는 JPA 확장 기능으로 `@Subselect`를 제공한다.       
+`@Subselect`는 쿼리 결과를 `@Entity`로 매핑할 수 있는 유용한 기능이다.      
 
+```java
+@Entity
+@Immutable
+@Subselect("select o.order_number as number, " +
+           "o.orderer_id, o.orderer_name, o.total_amoutns, " +
+           "o.receiver_name, o.state, o.order_date, " + 
+           "p.product_id, p.name as product_name " +
+           "from purchase_order o inner join order)line ol " +
+               "on o.order_number = ol.order_number " +
+               "cross join product p " +
+               "where ol.line_idx = 0 and ol.product_id = p.product_id")
+@Synchronize({"purchase_order", "order_line", "product"})
+public class OrderSummary {
+    @Id
+    private String number;
+    private String ordererId;
+    // 생략 
+}
+```
+`@Immutable`, `@Subselect`, `@Synchronize`는 하이버네이트 전용 어노테이션인데          
+이 태그를 사용하면 테이블이 아닌 쿼리 결과를 `@Entity`로 매핑할 수 있다.       
+    
+`@Subselect`는 조회 쿼리를 값으로 갖는다.        
+하이버네이트는 이 select 쿼리 결과를 매핑할 테이블처럼 사용한다.(서브쿼리)       
+`@Subselect`를 사용하면 쿼리 실행 결과를 매핑할 테이블처럼 사용한다.           
+뷰를 수정할 수 없듯이 `@Subselect`로 조회한 `@Entity` 역시 수정할 수 없다.   
 
+`@Subselect`를 이용한 `@Entity`의 매핑 필드를 수정하면    
+하이버네이트는 변경 내역을 반영하는 update 쿼리를 실행할 것이다.        
+그런데, 매핑한 테이블이 없으므로 에러가 발생한다.        
+    
+이런 문제를 방지하기 위해 `@Immutable`을 사용한다.       
+`@Immutable`을 사용하면 하이버네이트는      
+해당 엔티티의 매핑 필드/프로퍼티가 변경되어도 DB에 반영하지 않고 무시한다.     
 
+```java
+Order order = orderRepository.findById(orderNumber);
+order.changeShippingInfo(newInfo); // 상태 변경 
 
+// 변경 내역이 DB에 반영되지 않았는데 purchase_order 테이블에서 조회  
+List<OrderSummary> summaries = orderSummaryRepository.findByOrdererId(userId);
+```
+위 코든느 Order의 상태를 변경한 뒤에 OrderSummary를 조회하고 있다.     
+특별한 이유가 없으면 하이버네이트는 변경사항을 트랜잭션을 커밋하는 시점에 DB에 반영하므로,      
+Order의 변경 내역을 아직 purchase_order 테이블에 반영하지 않은 상태에서           
+purchase_order 테이블을 사용하는 OrderSummary를 조회하게 된다.           
+즉, OrderSummary에는 최신 값이 아니 이전 값이 담기게 된다.     
+  
+이런 문제를 해소하기 위한 용도로 사용하는 것이 `@Synchronize`이다.        
+`@Synchronize`는 해당 엔티티와 관련된 테이블 목록을 명시한다.        
+하이버네이트는 엔티티를 로딩하기 전에 지정한 테이블과 관련된 변경이 발생하면 플러시를 먼저한다.     
+OrderSummary의 `@Synchronize`는 `purchase_order` 테이블을 지정하고 있으므로 OrderSummary로 로딩하기 전에      
+`purchase_order` 테이블에 변경이 발생하면 관련 내역을 먼저 플러시한다.     
+따라서 OrderSummary를 로딩하는 시점에서는 변경 내역이 반영된다.   
 
+`@Subselect`를 사용해도 일반 `@Entity`와 같기 때문에   
+`EntityManager.find()`, `JPQL`, `Criteria`를 사용해서 조회할 수 있다는 것이  
+`@Subselect`의 장점이다.   
+
+```java
+OrderSummary summary = entityManager.find(OrderSummary.class, orderNumber);
+TypedQuery<OrderSummary> query = em.createQuery("select os from OrderSummary " + 
+    "os where os.ordererId = :ordererId " + 
+    "order by os.orderDate desc", OrderSummary.class);
+query.setParameter("ordererId", ordererId);
+List<OrderSummary> result = query.getResultList();
+```
+
+`@Subselect`는 이름처럼 `@Subselect`의 값으로 지정한 쿼리를 from 절의 서브쿼리로 사용한다.    
