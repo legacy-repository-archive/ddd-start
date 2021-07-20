@@ -251,13 +251,99 @@ public class JpaOrderRepository implments OrderRepository {
     }
 }
 ```
-       
-**리포지토리 구현 기술 의존**        
-도메인 모델은 구현 기술에 의존하지 않아야 한다.               
-그런데, JPA용 Specification 인터페이스는 toPredicate() 메서드가 JPA의 Root와            
-`CirteriaBuilder`에 의존하고 있으므로 사용하는 리포지터리 인터페이스는 이미 JPA에 의존하는 모양이된다.         
-   
-그렇다면 `Specification`을 구현 기술에 완전히 중립적인 형태로 구형해서    
+          
+# 정렬 구현   
+JPA의 `CriteriaQuery=orderBy()`를 이용해서 정렬 순서를 지정한다.           
+`CriteriaBuilder#asc()` 메서드와 `clesc()` 메서드로 정렬할 대상을 지정한다.               
+`JPQL`을 사용하는 경우에는 JPQL의 `order by` 절을 사용하면 된다.          
+  
+```java  
+TypedQuery<Order> query = entityManager.createQuery(
+    "select o from Order o " +
+        "where o.orderer.memberId.id = :ordererId " + 
+        "order by o.number.number desc", Order.class);
+```
+정렬 순서가 고정된 경우에는 `CriteriaQuery#orderBy()`나      
+JPQL의 orderby 절을 이용해서 정렬 순서를 지정하면 되지만,       
+정렬 순서를 응용 서비스에 결정하는 경우에는 정렬 순서를 리포지터리에 전달할 수 있어야한다.       
+           
+JPA Criteria는 Order 타입을 이용해서 정렬 순서를 지정한다.         
+그런데 JPA의 Order는 CriteriaBuilder를 이용해야 생성할 수 있다.           
+정렬 순서를 지정하는 코드는 리포지터리를 사용하는 응용 서비스에 위치하게 되는데       
+응용 서비스는 JPA Order가 아닌 다른 타입을 이용해서 리포지터리에 정렬 순서를 전달하고        
+JPA 리포지터리는 이를 다시 JPA Order로 변환하는 작업을 해야한다.    
+
+정렬 순서를 지정하는 가장 쉬운 방법은 다음과 같이 문자열을 사용하는 것이다.        
+```java
+List<Order> orders = orderRepository.findAll(someSpec, "number.number desc");
+```
+JPA 리포지터리 구현 클래스는 문자열을 파싱해서      
+JPA Criteia의 Order로 변환하거나 JPQL의 order by 절로 변환하면된다.       
+
+```java
+@Repository 
+pubilc class JpaOrderRepository implements OrderRepository {
+    @PersistenceContext
+    private EntityManager entityManager;  
+    ...
+    
+    @Override
+    public List<Order> findAll(Specification<Order> spec, String ... orders) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Order> criteriaQuery = cb.createQuery(Order.class);  
+        Root<Order> root = criteriaQuery.from(Order.class);
+        Predicate predicate = spec.toPredicate(root, cb);
+        criteriaQuery.where(predicate);
+        if (orders.length > 0 ) {
+            criteriaQuery.orderBy(JpaQueryUtils.toJpaOrders(root, cb, orders));
+        }
+        TypedQuery<Order> query = entityManager.createQuery(criteriaQuery);
+        return query.getResultList();
+    }
+}
+```
+`JpaQueryUtils.toJpaOrders()`는 변환을 위해 구현한 보조 클래스로 구현 코드는 아래와 같다.   
+  
+```java
+생략..  
+```   
+`JpaQueryUtils.toJpaOrders()` 메서드를 사용하면 문자열 배열로부터     
+다음과 같이 JPA Order 객체를 생성하므로 다양한 정렬 순서를 지정할 수 있다.     
+  
+* name desc -> cb.desc(root.get( "name" )); 
+* customer.name asc -> cb.asc(root.get( "customer" ).get( "name" ));
+ 
+JPQL을 사용하는 리포지터리를 위해 JpaQueryUtils에 메서드를 추가로 구현한다.      
+    
+```java
+public class JpaQueryUtils {
+    ...(생략)
+    
+    public static String toJPQLOrderby(String alias, String ... orders) {
+        if(orders == null || orders.length == 0) return "";
+        String orderParts = Arrays.stream(orders)
+            .map(order -> alias + "." + order)
+            .collect(joining(","));
+        return "order by " = orderParts;    
+    }
+}
+```
+JPQL을 사용하는 리포지터리 코드는 다음과 같이 toJPQLOrderBy() 메서드를 사용해서      
+알맞은 order by 절을 생성할 수 있다.     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
