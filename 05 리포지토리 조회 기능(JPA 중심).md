@@ -171,6 +171,82 @@ root.get("orderer").get("memberId").get("id")
    
 적적 메타 모델 클래스를 직접 작성할 수 있지만 하이버네이트와 같은 JPA 프로바이더는       
 정적 메타 모델을 생성하는 도구를 제공하고 있으므로 이들 도구를 사용하면 편리하다.      
+     
+## AND/OR 스펙조합을 위한 구현          
+JPA를 위한 AND/OR 스펙은 다음과 같이 구현할 수 있다.   
+
+```java
+public class AndSpecification<T> implements Specification<T> {
+    private List<Specification<T>> specs;
+    
+    public AndSpecification(Specification<T> ... specs) {
+        this.specs = Arrays.asList(specs);
+    }
+    
+    @Override
+    public Predicate toPredicate(Root<T> root, CriterialBuilder cb) {
+        Predicated[] predicates = specs.stream()
+            .map(spec -> spec.toPredicate(root, cb))
+            .toArray(size -> new Predicate[size]);
+            return cb.and(predicates);
+    }
+}
+```
+```java
+... OR 스펙은 생략 
+```
+`toPredicate()`는 생성자로 전달받은 `Specification` 목록으로 바꾸고       
+`CriteriaBuilder`의 `and()`를 사용해서 새로운 Predicate를 생성한다.       
+     
+두 스펙을 쉽게 생성하기 위해 아래와 같은 클래스를 구현할 수 있다.       
+
+```java
+public class Specs {
+    public static<T> Specification<T> and(Specification<T> ... specs) {
+        return new AndSpecification<>(specs);
+    }
+    
+    pubilc static<T> Specification<T> or(Specification<T> ... specs) {
+        return new OrSpecification<>(specs);
+    }
+}
+```
+이제 스펙 조합이 필요하면 다음과 같은 방법으로 스펙을 조합하면 된다.   
+
+```java
+Specification<Order> specs = Specs.and(
+    OrderSpecs.orderer("madvirus"), OrderSpecs.between(fromTime, toTime));
+```
+
+## 스펙을 사용하는 JPA 리포지터리 구현    
+이제 남은 작업은 스펙을 사용하도록 리포지터리를 구현하는 것이다.     
+먼저 리포지터리 인터페이스는 스펙을 사용하는 메서드를 제공해야한다.    
+
+```java
+public interface OrderRepository {
+    public LIst<Order> findAll(Specification<Order> spec);
+    ...
+}
+```
+  
+이를 상속받은 JPA 리포지토리를 같이 구현할 수 있다.    
+
+```java
+@Repository  
+public class JpaOrderRepository implments OrderRepository {
+    @PersistenceContext
+    private EntityManager entityManager;
+    
+    @Override
+    public List<Order> findAll(Specification<Order> spec) {
+       
+    }
+}
+```
+
+
+
+
 
 
 
