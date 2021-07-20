@@ -239,10 +239,29 @@ public class JpaOrderRepository implments OrderRepository {
     
     @Override
     public List<Order> findAll(Specification<Order> spec) {
-       
+       CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+       CriteriaQuery<Order> criteriaQuery = cb.createQuery(Order.class);  
+       Root<Order> root = criteriaQuery.from(Order.class);
+       Predicate predicate = spec.toPredicate(root, cb);
+       criteriaQuery.where(predicate);
+       criteriaQeury.orderBy(
+           cb.desc(root.get(Order_.number).get(OrderNo_.number)));
+       TypedQuery<Order> query = entityManager.createQuery(criteriaQuery);
+       return query.getResultList();
     }
 }
 ```
+       
+**리포지토리 구현 기술 의존**        
+도메인 모델은 구현 기술에 의존하지 않아야 한다.               
+그런데, JPA용 Specification 인터페이스는 toPredicate() 메서드가 JPA의 Root와            
+`CirteriaBuilder`에 의존하고 있으므로 사용하는 리포지터리 인터페이스는 이미 JPA에 의존하는 모양이된다.         
+   
+그렇다면 `Specification`을 구현 기술에 완전히 중립적인 형태로 구형해서    
+
+
+
+
 
 
 
