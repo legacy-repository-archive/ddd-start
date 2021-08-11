@@ -47,7 +47,7 @@ BOUNDED CONTEXT는 모델의 **한 경계를 결정**하며
        
 `BOUNDED CONTEXT`는 용어를 기준으로 구분하고 분리하고 경계를 나눈다.(카탈로그/재고)   
 그리고 `BOUNDED CONTEXT`는 실제 사용자에게 기능을 제공하는 물리적인 시스템으로    
-도메인 모델은 이 `BOUNDED CONTEXT` 안에서 도메인을 구현하도록 한다.   
+도메인 모델은 이 `BOUNDED CONTEXT` 안에서 도메인을 구현하도록 한다.     
 
 
 
