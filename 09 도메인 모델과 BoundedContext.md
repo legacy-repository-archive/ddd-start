@@ -49,6 +49,24 @@ BOUNDED CONTEXT는 모델의 **한 경계를 결정**하며
 그리고 `BOUNDED CONTEXT`는 실제 사용자에게 기능을 제공하는 물리적인 시스템으로    
 도메인 모델은 이 `BOUNDED CONTEXT` 안에서 도메인을 구현하도록 한다.     
 
+이상적으로 하위 도메인과 BOUNDED CONTEXT가 일대일 관계를 가지면 좋겠지만 그러지 않을 때가 많다.      
+BOUNDED CONTEXT는 기업의 팀 조직 구조에 따라 결정되기 때문이다.     
+  
+[]()   
+  
+**주문 하위 도메인**     
+* 주문 처리팀 : 주문 BOUNDED CONTEXT      
+* 결제 처리팀 : 결제 금액 계산 BOUNDED CONTEXT   
+* 카탈로그와 재고 관리는 아직 명확히 안 나뉘어져 상품 BOUNDED CONTEXT에서 구현 
+
+규모가 작은 기업일 경우 팀을 나누기 힘들어 개발팀에서 회원/주문/결제/재고 등등의 도메인을 처리한다.     
+즉, 여러 하위 도메인을 하나의 BOUNDED CONTEXT에서 구현한다.    
+
+
+
+
+
+
 
 
 
