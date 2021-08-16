@@ -76,7 +76,13 @@ BOUNDED CONTEXT는 기업의 팀 조직 구조에 따라 결정되기 때문이�
 
 [#](#)  
 
+BOUNDED CONTEXT는 도메인 모델을 구분하는 경계가 되기 때문에       
+BOUNDED CONTEXT는 구현하는 하위 도메인에 알맞은 모델을 포함한다.    
 
+같은 `사용자`라 하더라도   
+`주문 BOUNDED CONTEXT`와 `회원 BOUNDED CONTEXT`가 갖는 모델이 달라진다.    
+또한, 같은 상품이라도 `카탈로그 BOUNDED CONTEXT`의 Product와            
+재고 BOUNDED CONTEXT의 Product는 각 컨텍스트에 맞는 모델을 갖는다.    
 
 
 
