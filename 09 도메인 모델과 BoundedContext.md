@@ -168,12 +168,23 @@ UI 서버는 각 BOUNDED CONTEXT를 위한 파사드 역할을 수행한다.
 
 ```java
 / *
-  * 상품 추천 기능을 표현하는 도메인 서비스  
+  * 상품 추천 기능을 표현하는 도메인 서비스(카탈로그 기반 추천 이용)    
   */
 public interface ProductRecommnedationService {
     public List<Product> getRecommendationOf(ProductId id);
 }
 ```
+  
+도메인 서비스를 구현한 클래스는 인프라스트럭처 영역에 위치한다.       
+이 클래스는 외부 시스템과의 연동을 처리하고 외부 시스템의 모델과 현재 도메인 모델간의 변환을 책임진다.     
+
+[#](#)  
+
+RecSystemClient는 외부 추천 시스템이 제공하는 REST API를 이용해서          
+특정 상품을 위한 추천 상품 목록을 로딩한다.       
+이 REST API가 제공하는 데이터는 추천 시스템의 모델을 기반으로 하고 있기 때문에          
+API 응답은 다음과 같이 상품 도메인 모델과 일치하지 않는 데이터를 제공할 것이다.       
+
 
 
 
