@@ -121,7 +121,14 @@ BOUNDED CONTEXT는 도메인 및 도메인 기능을 제공하는 표현/응용/
 대표적인 예가 **CQRS(Command Query Responsibility Segregation**이다.              
 **CQRS 는 상태를 변경하는 명령 기능과 내용을 조회하는 쿼리 기능을 위한 모델을 구분하는 패턴이다.**       
 
+[#](#)
+   
+이 패턴을 **단일 BOUNDED CONTEXT**에 적용하면       
+상태 변경과 관련된 기능은 `도메인 모델` 기반으로 구현하고      
+조회 기능은 `서비스-DAO`를 이용해서 구현할 수 있다.          
 
+
+   
 
 
 
