@@ -185,8 +185,18 @@ RecSystemClient는 외부 추천 시스템이 제공하는 REST API를 이용해
 이 REST API가 제공하는 데이터는 추천 시스템의 모델을 기반으로 하고 있기 때문에          
 API 응답은 다음과 같이 상품 도메인 모델과 일치하지 않는 데이터를 제공할 것이다.       
 
+```json
+[
+    {itemId: 'PROD-1000', type: 'PRODUCT', rank: 100},
+    {itemId: 'PROD-1001', type: 'PRODUCT', rank: 54}   
+]
+```
 
+RecSystemClient는 REST API로부터 데이터를 읽어와 카탈로그 도메인에 맞는 상품 모델로 변환한다.     
 
+```java
+
+```
 
 
 
