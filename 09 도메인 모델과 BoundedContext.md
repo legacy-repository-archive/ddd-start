@@ -157,7 +157,20 @@ UI 서버는 각 BOUNDED CONTEXT를 위한 파사드 역할을 수행한다.
        
 카탈로그와 추천 BOUNDED CONTEXT간 통합이 필요한 기능은 다음과 같다.           
 * 사용자가 제품 상세 페이지를 볼 때, 보고 있는 상품과 유사한 상품 목록을 하단에 보여준다.     
+       
+카탈로그 BOUNDED CONTEXT에 추천 제품 목록을 요청하면             
+카탈로그 BOUNDED CONTEXT는 추천 BOUNDED CONTEXT로부터 추천 정보를 읽어와 추천 제품 목록을 제공한다.        
+이때 카탈로그/추천 컨텍스트의 도메인 모델은 서로 다르다.      
+카탈로그는 제품을 중심으로 도메인 모델을 구현하지만 추천은 추천 연산을 위해 모델을 구현한다.       
 
+* 추천 : 상품의 간략한 정보만, 상품 번호 대신 아이템 ID 라는 이름을 사용
+* 카탈로그 : 추천 데이터는 받아오지만 도메인을 활용한다기 보다는 도메인 모델을 사용해서 추천 상픔 표현   
+
+```java
+public interface ProductRecommnedationService {
+    public List<Product> getRecommendationOf(ProductId id);
+}
+```
 
 
 
