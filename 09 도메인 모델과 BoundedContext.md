@@ -123,9 +123,31 @@ BOUNDED CONTEXT는 도메인 및 도메인 기능을 제공하는 표현/응용/
 
 [#](#)
    
-이 패턴을 **단일 BOUNDED CONTEXT**에 적용하면       
-상태 변경과 관련된 기능은 `도메인 모델` 기반으로 구현하고      
-조회 기능은 `서비스-DAO`를 이용해서 구현할 수 있다.          
+이 패턴을 **단일 BOUNDED CONTEXT**에 적용하면        
+상태 변경과 관련된 기능은 `도메인 모델` 기반으로 구현하고        
+조회 기능은 `서비스-DAO`를 이용해서 구현할 수 있다.    
+  
+각 BOUNDED CONTEXT는 서로 다른 구현 기술을 사용할수도 있다.      
+어느 BOUNDED CONTEXT는 MVC를 사용한다면 다른 BOUNDED CONTEXT는 WebFlux를 사용하거나         
+MySQL 기반의 JPA 대신에 Redis, MongoDB 와 같은 NoSQL도 사용할 수 있다.     
+   
+BOUNDED CONTEXT는 사용자에게 보여지는 UI를 가져야하는 것은 아니다.        
+BOUNDED CONTEXT의 REST API를 직접 호출해서 로딩한 JSON 데이터를 알맞게 가공해서 리뷰 목록을 보여줄수도 있다.     
+
+[#](#)     
+  
+UI를 처리하는 서버를 두고 UI에서 BOUNDED CONTEXT와 통신해서 사용자 요청을 처리하는 방법도 있다.   
+  
+[#](#)    
+  
+UI 서버는 각 BOUNDED CONTEXT를 위한 파사드 역할을 수행한다.       
+브라우저가 UI 서버에 요청을 보내면 UI서버는          
+카탈로그와 리뷰 BOUNDED CONTEXT로부터 필요한 정보를 읽어와 조합한 뒤 브라우저에 응답을 제공한다.       
+각 BOUNDED CONTEXT는 UI 서버와 통신하기 위해 HTTP, Protobuf, Thrift와 같은 방식을 이용할 수 있다.   
+    
+   
+# BOUNDED CONTEXT간의 통합
+
 
 
    
