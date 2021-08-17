@@ -167,10 +167,14 @@ UI 서버는 각 BOUNDED CONTEXT를 위한 파사드 역할을 수행한다.
 * 카탈로그 : 추천 데이터는 받아오지만 도메인을 활용한다기 보다는 도메인 모델을 사용해서 추천 상픔 표현   
 
 ```java
+/ *
+  * 상품 추천 기능을 표현하는 도메인 서비스  
+  */
 public interface ProductRecommnedationService {
     public List<Product> getRecommendationOf(ProductId id);
 }
 ```
+
 
 
 
