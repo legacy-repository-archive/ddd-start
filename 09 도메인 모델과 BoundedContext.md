@@ -98,6 +98,28 @@ BOUNDED CONTEXT는 구현하는 **하위 도메인에 알맞은 모델을 포함
 
 # BOUNDED CONTEXT 구현  
 > BOUNDED CONTEXT는 모듈이 아니다.   
+     
+BOUNDED CONTEXT가 도메인 모델만 포함하는 것은 아니다.             
+BOUNDED CONTEXT는 도메인 및 도메인 기능을 제공하는 표현/응용/인프라 영역 모두를 포함한다.          
+도메인 모델의 데이터 구조가 바뀌면 DB 테이블 스키마도 함께 변경해야 하므로 해당 테이블도 BOUNDED CONTEXT에 포함된다.       
+
+[#](#)   
+
+표현 영역은 인간 사용자를 위해 HTML 페이지를 생성할 수도 있고     
+다른 BOUNDED CONTEXT를 위해 REST API를 제공해줄 수 있다.      
+   
+모든 BOUNDED CONTEXT를 반드시 도메인 주도로 개발할 필요는 없다.       
+`상품 리뷰`는 복잡한 도메인 로직을 갖지 않기 때문에 CRUD 방식으로 구현해도 된다.        
+즉, DAO와 데이터 중심의 밸류 객체를 이용해서 리뷰 기능을 구현해도 기능을 유지보수 하는데 큰 문제가 없다.   
+   
+[#](#)      
+      
+서비스 DAO 구조를 사용하면 도메인 기능이 서비스에 흩어지게 되지만      
+도메인 기능 자체가 단순하면 서비스-DAO로 구성된 CRUD 방식을 사용해도 코드를 유지보수하는데 문제되지 않는다.       
+    
+한 BOUNDED CONTEXT에서 두 방식을 혼합해서 사용할 수도 있다.       
+대표적인 예가 **CQRS(Command Query Responsibility Segregation**이다.              
+**CQRS 는 상태를 변경하는 명령 기능과 내용을 조회하는 쿼리 기능을 위한 모델을 구분하는 패턴이다.**       
 
 
 
