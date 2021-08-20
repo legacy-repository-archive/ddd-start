@@ -264,7 +264,27 @@ RecSystemClient는 추천 시스템의 모델을 받아와
 `카탈로그` 도메인 관점에서 큐에 저장할 메시지를 생성하면      
 카탈로그 시스템의 연동 코드는 카탈로그 기준의 데이터를 그대로 메시지 큐에 저장한다.     
 
-
+```java
+// 상품 조회 관련 로그 기록 코드 
+public class ViewLogService {
+    private MessageClient messageClient;
+    
+    public void appendViewLog(String memberId, String productId, Date time) {
+        messageClient.send(new ViewLog(memberId, productId, time));
+    }
+    ...
+}
+```
+```java
+public class RabbitMQClient implements MessageClient {
+    private RabbitTemplate rabbitTemplate;
+    
+    @Override
+    public void send(ViewLog viewLog) {
+        // 
+    }
+}
+```
 
 
 
