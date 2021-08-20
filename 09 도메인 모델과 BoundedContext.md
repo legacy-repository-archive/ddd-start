@@ -145,7 +145,7 @@ UI 서버는 각 BOUNDED CONTEXT를 위한 파사드 역할을 수행한다.
 카탈로그와 리뷰 BOUNDED CONTEXT로부터 필요한 정보를 읽어와 조합한 뒤 브라우저에 응답을 제공한다.       
 각 BOUNDED CONTEXT는 UI 서버와 통신하기 위해 HTTP, Protobuf, Thrift와 같은 방식을 이용할 수 있다.   
        
-# BOUNDED CONTEXT 간의 통합    
+# BOUNDED CONTEXT 간 통합    
 > 매출 증대를 위해 카탈로그 하위 도메인에 개인화 추천 기능을 도입하기로 했다고 가정한다.           
       
 기존 카탈로그 시스템을 개발하던 팀과 별도로           
@@ -191,13 +191,39 @@ API 응답은 다음과 같이 상품 도메인 모델과 일치하지 않는 �
     {itemId: 'PROD-1001', type: 'PRODUCT', rank: 54}   
 ]
 ```
-
 RecSystemClient는 REST API로부터 데이터를 읽어와 카탈로그 도메인에 맞는 상품 모델로 변환한다.     
 
 ```java
-
+public class RecSystemClient implements ProductRecommendationService {
+    private ProductRepository productRepository;
+    
+    @Override
+    public List<Product> getRecommendationsOf(ProductId id) {
+        List<RecommendationItem> items = getRecItems(id.getValue()) {
+            return toProducts(items);
+        }
+    } 
+    
+    @Override
+    public List<RecommendationItem> getRecItems(String ) {
+        List<RecommendationItem> items = getRecItems(id.getValue()) {
+            return toProducts(items);
+        }
+    }
+    
+    private List<Product> toProducts(List<RecommendationItem> items) {
+        return items.stream()
+            .map(item -> toProductId(item.getItemId()))
+            .map(prodId -> productRepository.findById(prodId))
+            .collect(toList());
+    }
+    
+    private ProductId toProductId(String itemId) {
+        return new ProductId(itemId);
+    }
+    ...
+}
 ```    
-오늘부터 다시 시작!   
      
 
      
