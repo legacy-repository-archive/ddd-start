@@ -222,11 +222,12 @@ public class RecSystemClient implements ProductRecommendationService {
     ...
 }
 ```     
-`getRecItems()`메서드에서 사용하는 `externalRecClient`는                    
-외부 추천 시스템에 연결할 때 사용하는 클라이언트로서                            
-추천 시스템을 관리하는 팀에서 배포하는 모듈이라고 가정하자                     
-                       
-이 모듈이 제공하는 RecommendationItem은 추천 시스템의 모델을 따를 것이다.            
+`getRecItems()`메서드에서 사용하는 `externalRecClient`는                     
+외부 추천 시스템에 연결할 때 사용하는 클라이언트로서                                
+추천 시스템을 관리하는 팀에서 배포하는 모듈이라고 가정하자                        
+이 모듈이 제공하는 RecommendationItem은 추천 시스템의 모델을 따를 것이다.          
+
+
 
    
 
