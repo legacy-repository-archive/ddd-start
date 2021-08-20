@@ -205,7 +205,6 @@ public class RecSystemClient implements ProductRecommendationService {
     
     @Override
     public List<RecommendationItem> getRecItems(String ) {
-        // externalRecClient는 외부 추천 시스템을 위한 클라이언트라고 가정 
         return externalRecClient.getRecs(itemId);
     }
     
@@ -222,27 +221,27 @@ public class RecSystemClient implements ProductRecommendationService {
     ...
 }
 ```        
-`getRecItems()`메서드에서 사용하는 `externalRecClient`는                         
-외부 추천 시스템에 연결할 때 사용하는 클라이언트로서                                       
-추천 시스템을 관리하는 팀에서 배포하는 모듈이라고 가정하자                                
-이 모듈이 제공하는 RecommendationItem은 추천 시스템의 모델을 따를 것이다.                 
-                            
+`getRecItems()`에서 사용하는 `externalRecClient`는      
+외부 추천 시스템에 연결할 때 사용하는 클라이언트로서                                          
+추천 시스템을 관리하는 팀에서 배포하는 모듈이라고 가정한다.        
+이 모듈이 제공하는 RecommendationItem 타입은 추천 시스템의 모델을 따를 것이다.                 
+                             
 RecSystemClient는 추천 시스템의 모델을 받아와 `toProducts()` 메서드를 이용해서                 
 카탈로그 도메인의 Product모델로 변환하는 작업을 처리한다.      
-  
-두 모델간의 변호나 과정이 복잡하면      
-위 그림과 같이 변환 처리를 위한 별도 클래스를 만들고 이 클래스에서 변환을 처리해도 된다.      
-   
-[#](#)    
-     
-REST API를 호출하는 것은 두 BOUNDED CONTEXT를 직접 통합하는 방법이다.                           
-직접 통합하는 대신 간접적으로 통합하는 방법도 있다.                             
-대표적인 간접 통합 방식이 메시지 큐를 사용하는 것이다.                        
-추천 시스템은 사용자의 조회 상품 이력이나 구매 이력과 같은 사용자 활동 이력을 필요로 하는데      
-이 내역을 전달할 때 메시지 큐를 사용할 수 있다.      
-  
-[#](#)     
-  
+    
+두 모델간의 변호나 과정이 복잡하면        
+위 그림과 같이 변환 처리를 위한 별도 클래스를 만들고 이 클래스에서 변환을 처리해도 된다.        
+      
+[#](#)      
+        
+REST API를 호출하는 것은 두 BOUNDED CONTEXT를 직접 통합하는 방법이다.                             
+직접 통합하는 대신 간접적으로 통합하는 방법도 있다.                               
+대표적인 간접 통합 방식이 메시지 큐를 사용하는 것이다.                          
+추천 시스템은 사용자의 조회 상품 이력이나 구매 이력과 같은 사용자 활동 이력을 필요로 하는데        
+이 내역을 전달할 때 메시지 큐를 사용할 수 있다.         
+    
+[#](#)       
+    
 카탈로그 BOUNDED CONTEXT는 추천 시스템이 필요로 하는 사용자 활동 이력을 메시지 큐에 추가한다.    
 메시지 큐는 보통 비동기로 메시지를 처리하기 때문에 카탈로그 BOUNDED CONTEXT는 메시지를 큐에 추가한 뒤에      
 추천 BOUNDED CONTEXT가 메시지를 처리할 때까지 기다리지 않고 바로 이어서 자신의 처리를 계속한다.    
