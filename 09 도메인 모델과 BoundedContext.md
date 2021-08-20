@@ -199,16 +199,14 @@ public class RecSystemClient implements ProductRecommendationService {
     
     @Override
     public List<Product> getRecommendationsOf(ProductId id) {
-        List<RecommendationItem> items = getRecItems(id.getValue()) {
-            return toProducts(items);
-        }
+        List<RecommendationItem> items = getRecItems(id.getValue());
+        return toProducts(items);
     } 
     
     @Override
     public List<RecommendationItem> getRecItems(String ) {
-        List<RecommendationItem> items = getRecItems(id.getValue()) {
-            return toProducts(items);
-        }
+        // externalRecClient는 외부 추천 시스템을 위한 클라이언트라고 가정 
+        return externalRecClient.getRecs(itemId);
     }
     
     private List<Product> toProducts(List<RecommendationItem> items) {
@@ -224,7 +222,10 @@ public class RecSystemClient implements ProductRecommendationService {
     ...
 }
 ```    
-     
+`getRecItems()`메서드에서 사용하는 `externalRecClient`는          
+외부 추천 시스템에 연결할 때 사용하는 클라이언트로서       
+추천 시스템을 관리하는 팀에서 배포하는 모듈이라고 가정하자     
+
 
      
 
