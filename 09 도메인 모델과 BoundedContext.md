@@ -259,23 +259,25 @@ RecSystemClient는 추천 시스템의 모델을 받아와
 추천 BOUNDED CONTEXT 관점에서 접근하는 아래와 같은 메시지 구조를 잡을 수 있다.    
    
 [#](#)      
-      
+    
 어떤 도메인 관점에서 모델을 사용하느냐에 따라 두 BOUNDED CONTEXT의 구현 코드가 달라지게 된다.              
-`카탈로그` 도메인 관점에서 큐에 저장할 메시지를 생성하면                 
+    
+**카탈로그 도메인 관점**에서 큐에 저장할 메시지를 생성하면                   
 카탈로그 시스템의 연동 코드는 카탈로그 기준의 데이터를 그대로 메시지 큐에 저장한다.              
-                
+
+**메시지 포맷(카탈로그 기준) - 카탈로그 로직**
 ```java   
 // 상품 조회 관련 로그 기록 코드      
 public class ViewLogService {      
-    private MessageClient messageClient;   
+    private MessageClient messageClient; // RabbitMQClient   
        
     public void appendViewLog(String memberId, String productId, Date time) {
         messageClient.send(new ViewLog(memberId, productId, time));
     }      
     ...    
 }        
-```              
-```java      
+   
+// messageClient
 public class RabbitMQClient implements MessageClient {     
     private RabbitTemplate rabbitTemplate;
             
@@ -286,11 +288,36 @@ public class RabbitMQClient implements MessageClient {
     }         
 }       
 ```          
-카탈로그 도메인 모델을 기준으로   
-큐에 데이터를 저장하기로 했다면 카탈로그의 코드는 다음과 같이 바뀔 것이다.         
+카탈로그 도메인을 기준으로 메시지를 전송하므로      
+추천 시스템에서는 자신의 모델에 맞게 메시지를 변환해서 처리해야 한다.   
+   
+___ 
 
+추천 시스템을 기준으로 큐에 데이터를 저장하기로 했다면 카탈로그의 코드는 아래와 같이 바뀐다.        
 
+**메시지 포맷(추천 기준) - 카탈로그 로직**
+```java
+// 상품 조회 관련 로그 기록 코드   
+public class ViewLogService {
+    private MessageClient messgaeClient;
+    
+    public void appendViewLog(String memberId, String ProductId, Date time) {
+        messageClient.send(new ActivityLog(productId, memberId, ActivityTupe.VIEW, time));
+    }
+}
 
+// messageClient
+public class RabbitMQClient implements MessageClient {     
+    private RabbitTemplate rabbitTemplate;
+            
+    @Override
+    public void send(ActivityLog activityLog) {
+        rabitTemplate.convertAndSend(logQueueName, activityLog);   
+    }         
+}
+```
+
+즉, 자신을 기준으로 하면 ViewLog, 타 도메인을 기준으로 하면 ActivityLog 사용 
   
    
 
